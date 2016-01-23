@@ -81,12 +81,16 @@ class TiffDirectoryEntry(object):
 	LONG=4
 	RATIONAL=5
 
+	STRING=0
+	LENGTH=1
+	FORMAT=2
+
 	types={
-		BYTE:		'byte',
-		ASCII:		'ascii',
-		SHORT:		'short',
-		LONG:		'long',
-		RATIONAL:	'rational'
+		BYTE:		('byte',	1, 's'),
+		ASCII:		('ascii',	1, 's'),
+		SHORT:		('short',	2, 'H'),
+		LONG:		('long',	4, 'L'),
+		RATIONAL:	('rational',8, 'LL')
 	}
 
 	def __init__(self, parent, br=None):
@@ -111,7 +115,7 @@ class TiffDirectoryEntry(object):
 
 	def _typestr(self, type):
 		if type in self.types:
-			return self.types[type]
+			return self.types[type][self.STRING]
 
 		return 'unknown'
 
@@ -132,24 +136,27 @@ class TiffDirectoryEntry(object):
 		if not self.br:
 			return None
 
+# To save time and space the Value Offset contains the Value instead of pointing to
+# the Value if and only if the Value fits into 4 bytes. If the Value is shorter than 4
+# bytes, it is left-justified within the 4-byte Value Offset, i.e., stored in the lowernumbered
+# bytes. Whether the Value fits within 4 bytes is determined by the Type
+# and Count of the field.
+
+		if self.types[self.type][self.LENGTH] * self.count <= 4:
+			return self.offset
+
 		self.br.seek(self.offset)
 
-		if self.type==TiffDirectoryEntry.BYTE:
-			return self.br.read(1, 'H', self.count)
+		if self.type in (TiffDirectoryEntry.BYTE, TiffDirectoryEntry.ASCII):
+			return self.br.read(self.types[self.type][self.LENGTH], self.types[self.type][self.FORMAT], self.count)
 
-		if self.type==TiffDirectoryEntry.SHORT:
-			return self.br.read(2, 'H', self.count, True)
-
-		elif self.type==TiffDirectoryEntry.LONG:
-			return self.br.read(4, 'L', self.count, True)
-
-		elif self.type==TiffDirectoryEntry.ASCII:
-			return self.br.read(1, 's', self.count)
+		if self.type in (TiffDirectoryEntry.SHORT, TiffDirectoryEntry.LONG):
+			return self.br.read(self.types[self.type][self.LENGTH], self.types[self.type][self.FORMAT], self.count, True)
 
 		elif self.type==TiffDirectoryEntry.RATIONAL:
 			values=()
 			for i in range(0, self.count):
-				numerator,denominator=self.br.read(8, 'LL', 1, True)
+				numerator,denominator=self.br.read(self, 'LL', 1, True)
 
 				values+=((numerator, denominator), )
 

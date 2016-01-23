@@ -38,7 +38,12 @@ class BinaryReader(object):
 		if not data:
 			return None
 
-		if all:
-			return unpack("{}{}{}".format(self.byteorder(), count, fmt), data)
+		unpacked=self.unpack(fmt, count, data)
 
-		return unpack("{}{}{}".format(self.byteorder(), count, fmt), data)[0]
+		if all:
+			return unpacked
+
+		return unpacked[0]
+
+	def unpack(self, fmt, count, data):
+		return unpack("{}{}{}".format(self.byteorder(), count, fmt), data)

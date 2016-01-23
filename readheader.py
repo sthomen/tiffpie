@@ -33,6 +33,7 @@ if __name__ == "__main__":
 				print "Byte order: {}".format(tiff.byteorder)
 				print "Magic number: {}".format(tiff.magic)
 				print "First IFD offset: {}".format(tiff.offset)
+				print "Linked IFD:s: {}".format(len(tiff.directory))
 
 				quit()
 

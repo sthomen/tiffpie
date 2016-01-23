@@ -4,6 +4,11 @@ from exceptions import TiffDirectoryEntryException
 from tags import TiffTags
 
 class TiffRootDirectory(object):
+	"""
+	Models the IFD:s of the TIFF File. Also base class for the TiffDirectory class,
+	this class generates dummy directory entries with linked subdirectories (entry.directory)
+	for any append()ed directory.
+	"""
 	def __init__(self):
 		self.entries=[]
 		self.offset=0
@@ -18,7 +23,14 @@ class TiffRootDirectory(object):
 	def __str__(self):
 		return '\n'.join([ str(e.directory) for e in self.entries ])
 
+	def __len__(self):
+		return len(self.entries)
+
 	def append(self, directory):
+		"""
+		Append a TiffDirectory to the root entries, this method creates dummy TiffDirectoryEntry objects
+		to hold the directory references.
+		"""
 		entry=TiffDirectoryEntry(self)
 		entry.tag=0
 		entry.directory=directory
@@ -26,6 +38,9 @@ class TiffRootDirectory(object):
 		self.entries.append(entry)
 
 	def find(self, tag):
+		"""
+		Recursively find a tag in discovered IFDs and subIFDs. Returns a tuple with all matches.
+		"""
 		results=()
 
 		for entry in self.entries:
@@ -38,6 +53,10 @@ class TiffRootDirectory(object):
 		return results
 
 class TiffDirectory(TiffRootDirectory):
+	"""
+	A direct model of the TIFF directory, requires an open BinaryReader file pointing to the same
+	file as the parent Tiff object.
+	"""
 	def __init__(self, br, offset):
 		super(TiffRootDirectory, self).__init__()
 

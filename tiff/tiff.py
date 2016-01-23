@@ -2,7 +2,7 @@
 
 from binaryreader import BinaryReader
 from exceptions import TiffException
-from dir import TiffDirectory, TiffDirectoryEntry
+from dir import TiffRootDirectory, TiffDirectory, TiffDirectoryEntry
 
 class Tiff(object):
 	BYTEORDER={
@@ -16,7 +16,7 @@ class Tiff(object):
 		self.magic=None
 		self.offset=None
 		self.br=None
-		self.directory=[]
+		self.directory=TiffRootDirectory()
 
 		self.readHeader()			# sets self.offset
 		self.readIFDs(self.offset)
@@ -27,7 +27,7 @@ class Tiff(object):
 			if last != None and byte != last:
 				raise TiffException('Inconsistent TIFF byte order mark')
 
-			if ord(byte)==0b1001101:	# MM, motorola, or big--endian
+			if ord(byte)==0b1001101:	# MM, motorola, or big-endian
 				bo='>'
 			elif ord(byte)==0b1001001:	# II, intel, or little-endian
 				bo='<'
@@ -59,10 +59,3 @@ class Tiff(object):
 				done=True
 
 			start=td.next
-
-	def find(self, tag):
-		res=()
-		for directory in self.directory:
-			res+=directory.find(tag)
-
-		return res

@@ -3,23 +3,50 @@
 from exceptions import TiffDirectoryEntryException
 from tags import TiffTags
 
-class TiffDirectory(object):
-	def __init__(self, br, offset):
+class TiffRootDirectory(object):
+	def __init__(self):
 		self.entries=[]
-
-		self.br=br
-		self.offset=offset
-		self.length=None
-		self.next=None
-
-		if self.br:
-			self.read(offset)
+		self.offset=0
+		self.next=0
 
 	def __iter__(self):
 		for entry in self.entries:
 			yield entry
 
 		raise StopIteration
+
+	def __str__(self):
+		return '\n'.join([ str(e.directory) for e in self.entries ])
+
+	def append(self, directory):
+		entry=TiffDirectoryEntry(self)
+		entry.tag=0
+		entry.directory=directory
+
+		self.entries.append(entry)
+
+	def find(self, tag):
+		results=()
+
+		for entry in self.entries:
+			if entry.directory:
+				results+=entry.directory.find(tag)
+
+			if entry.tag == tag:
+				results+=(entry, )
+
+		return results
+
+class TiffDirectory(TiffRootDirectory):
+	def __init__(self, br, offset):
+		super(TiffRootDirectory, self).__init__()
+
+		self.entries=[]
+		self.br=br
+		self.offset=offset
+		self.length=None
+
+		self.read(offset)
 
 	def __str__(self):
 		return '\n'.join([str(e) for e in self.entries + [ 'Next index: {}'.format(self.next) ]])
@@ -46,20 +73,6 @@ class TiffDirectory(object):
 
 		self.next=self.br.read(4, 'I')
 
-	def find(self, tag):
-		results=()
-
-		for entry in self.entries:
-			if entry.directory:
-				res=entry.directory.find(tag)
-				if res:
-					results+=res
-
-			if entry.tag == tag:
-				results+=(entry, )
-
-		return results
-
 class TiffDirectoryEntry(object):
 	# XXX Tiff 3.0 types, 6.0 has more, but I don't need them yet
 	BYTE=1
@@ -76,16 +89,19 @@ class TiffDirectoryEntry(object):
 		RATIONAL:	'rational'
 	}
 
-	def __init__(self, parent, br):
+	def __init__(self, parent, br=None):
 		self.parent=parent
 		self.br=br
 		self.tags=TiffTags()
 
-		self.tag=self.br.read()
-		self.type=self.br.read()
-		self.count=self.br.read(4, 'I')
-		self.offset=self.br.read(4, 'I')
+		self.tag=None
+		self.type=None
+		self.count=None
+		self.offset=None
 		self.directory=None
+
+		if br:
+			self._load()
 
 	def __repr__(self):
 		return 'TiffDirectoryEntry(parent={}, tag={}, type={}, count={}, offset={})'.format(self.parent.offset,  self._tagstr(self.tag), self._typestr(self.type), self.count, self.offset)
@@ -106,7 +122,16 @@ class TiffDirectoryEntry(object):
 
 		return hex(tag)
 
+	def _load(self):
+		self.tag=self.br.read()
+		self.type=self.br.read()
+		self.count=self.br.read(4, 'I')
+		self.offset=self.br.read(4, 'I')
+
 	def read(self):
+		if not self.br:
+			return None
+
 		self.br.seek(self.offset)
 
 		if self.type==TiffDirectoryEntry.BYTE:

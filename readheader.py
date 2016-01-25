@@ -10,6 +10,7 @@ from tiff.tags import TiffTags
 if __name__ == "__main__":
 	parser = ArgumentParser(description='Read TIFF header fields from a file')
 	parser.add_argument('filename', nargs='?', type=str, help='File to parse')
+	parser.add_argument('-v', dest='verbose', action='store_true', help='Also show data values when listing tags')
 	parser.add_argument('-i', dest='info', action='store_true', help='Show file info')
 	parser.add_argument('-l', dest='list', action='store_true', help='List known tags')
 	parser.add_argument('tags', metavar='tag', nargs='*', help='Find a specific tag')
@@ -43,4 +44,10 @@ if __name__ == "__main__":
 						print entry
 						print entry.read()
 			else:
-				print tiff.directory
+				if args.verbose:
+					for entry in tiff.directory.find(0x0)[0].directory:
+						print entry
+						print entry.read()
+
+				else:
+					print tiff.directory

@@ -161,6 +161,9 @@ class TiffDirectoryEntry(object):
 # bytes. Whether the Value fits within 4 bytes is determined by the Type
 # and Count of the field.
 
+		if not self.type in self.types.keys():
+			return None
+
 		if self.types[self.type][self.LENGTH] * self.count <= 4:
 			return self.offset
 
@@ -175,7 +178,7 @@ class TiffDirectoryEntry(object):
 		elif self.type==TiffDirectoryEntry.RATIONAL:
 			values=()
 			for i in range(0, self.count):
-				numerator,denominator=self.br.read(self, 'LL', 1, True)
+				numerator,denominator=self.br.read(self.types[self.type][self.LENGTH], 'LL', 1, True)
 
 				values+=((numerator, denominator), )
 
